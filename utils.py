@@ -100,15 +100,15 @@ def test(model, device, test_loader):
     return (test_loss, 100.0 * correct / len(test_loader.dataset))
 
 
-def train_via_des(model, des, device, test_dataset, model_name):
+def train_via_ndes(model, ndes, device, test_dataset, model_name):
     model.eval()
     test_loader = torch.utils.data.DataLoader(
         test_dataset, batch_size=1000, shuffle=True
     )
 
-    model = des.run(lambda x: test(x, device, test_loader))
+    model = ndes.run(lambda x: test(x, device, test_loader))
     test(model, device, test_loader)
-    torch.save({"state_dict": model.state_dict()}, f"{model_name}_{des.start}.pth.tar")
+    torch.save({"state_dict": model.state_dict()}, f"{model_name}_{ndes.start}.pth.tar")
 
 
 def train_via_gradient(
