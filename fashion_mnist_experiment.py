@@ -11,18 +11,18 @@ from sklearn.model_selection import StratifiedKFold, train_test_split
 from torch.utils.data import DataLoader, TensorDataset
 from torchvision import datasets, transforms
 
-from ndes import NDESOptimizer
+from ndes_optimizer import BasenDESOptimizer
+from ndes import SecondaryMutation
 from utils import seed_everything, train_via_ndes
 
 #  EPOCHS = 25000
 POPULATION_MULTIPLIER = 8
-#  EPOCHS = int(POPULATION_MULTIPLIER * 4 * 1200000)
-EPOCHS = int(POPULATION_MULTIPLIER * 4000 * 1200)
 POPULATION = int(POPULATION_MULTIPLIER * 4000)
+EPOCHS = int(POPULATION * 1200)
 NDES_TRAINING = True
 
 DEVICE = torch.device("cuda:0")
-BOOTSTRAP_BATCHES = True
+BOOTSTRAP = True
 MODEL_NAME = "fashion_ndes_bootstrapped"
 LOAD_WEIGHTS = False
 SEED_OFFSET = 0
@@ -155,20 +155,27 @@ class MyDatasetLoader:
         self.y_train = y_train
         self.batch_size = batch_size
         self.num_batches = int(ceil(x_train.shape[0] / batch_size))
+        self.i = 0
 
-    def cycle(self):
-        while True:
-            for i in range(self.num_batches - 1):
-                idx = i * self.batch_size
-                yield (
-                    i,
-                    (
-                        self.x_train[idx : idx + self.batch_size],
-                        self.y_train[idx : idx + self.batch_size],
-                    ),
-                )
-            idx = (self.num_batches - 1) * self.batch_size
-            yield (self.num_batches - 1, (self.x_train[idx:], self.y_train[idx:]))
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        i = self.i
+        idx = i * self.batch_size
+        self.i += 1
+        if i < self.num_batches - 1:
+            return i, (
+                self.x_train[idx : idx + self.batch_size],
+                self.y_train[idx : idx + self.batch_size],
+            )
+        elif i == self.num_batches - 1:
+            output = i, (self.x_train[idx:], self.y_train[idx:])
+            self.i = 0
+            return output
+
+    def __len__(self):
+        return self.num_batches
 
 
 if __name__ == "__main__":
@@ -201,7 +208,7 @@ if __name__ == "__main__":
 
         print(y_train.unique(return_counts=True))
 
-        if BOOTSTRAP_BATCHES is not None:
+        if BOOTSTRAP:
             early_stop_callback = EarlyStopping(
                 monitor="val_loss",
                 min_delta=0.00,
@@ -217,16 +224,16 @@ if __name__ == "__main__":
 
         criterion = nn.CrossEntropyLoss()
         train_loader = MyDatasetLoader(x_train, y_train, BATCH_SIZE)
-        ndes_optim = NDESOptimizer(
-            model,
-            criterion,
-            train_loader.cycle(),
-            None,
-            ewma_alpha=0.3,
-            num_batches=train_loader.num_batches,
+        ndes_optim = BasenDESOptimizer(
+            model=model,
+            criterion=criterion,
+            data_gen=train_loader,
+            use_fitness_ewma=True,
             x_val=x_val,
             y_val=y_val,
             restarts=None,
+            lr=1,
+            secondary_mutation=SecondaryMutation.Gradient,
             Ft=1,
             ccum=0.96,
             # cp=0.1,
@@ -234,7 +241,6 @@ if __name__ == "__main__":
             upper=2.0,
             budget=EPOCHS,
             tol=1e-6,
-            nn_train=True,
             lambda_=POPULATION,
             history=16,
             worst_fitness=3,
