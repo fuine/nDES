@@ -1,4 +1,7 @@
 import gc
+
+#  from pytorch_memlab import profile
+from enum import Enum
 from math import floor, log, sqrt
 from timeit import default_timer as timer
 
@@ -7,237 +10,17 @@ import pandas as pd
 import torch
 
 from gpu_utils import create_sorted_weights_for_matmul, fitness_nonlamarckian
-from population_initializers import XavierMVNPopulationInitializer
-from utils import (
-    bounce_back_boundary_1d,
-    bounce_back_boundary_2d,
-    seconds_to_human_readable,
-)
-
-#  from pytorch_memlab import profile
+from utils import bounce_back_boundary_1d, bounce_back_boundary_2d, create_directory
 
 
-class NDESOptimizer:
-
-    """Interface for the NDES optimizer for the neural networks optimization."""
-
-    def __init__(
-        self,
-        model,
-        criterion,
-        X,
-        Y,
-        ewma_alpha,
-        num_batches,
-        x_val,
-        y_val,
-        population_initializer=XavierMVNPopulationInitializer,
-        restarts=None,
-        test_func=None,
-        **kwargs,
-    ):
-        """TODO: to be defined1.
-
-        Args:
-            model: ``pytorch``'s model
-            criterion: Loss function, must be minimizable.
-            X: Training data.
-            Y: Training ground truth for the data.
-            restarts: Optional number of NDES's restarts.
-            **kwargs: Keyword arguments for NDES optimizer
-        """
-        self._layers_offsets_shapes = []
-        self.best_value = None
-        self.model = model
-        self.criterion = criterion
-        self.population_initializer = population_initializer
-        #  self.X = X
-        #  self.Y = Y
-        self.data_gen = X
-        self.x_val = x_val
-        self.y_val = y_val
-        self.kwargs = kwargs
-        self.restarts = restarts
-        self.start = timer()
-        if restarts is not None and self.kwargs.get("budget") is not None:
-            self.kwargs["budget"] //= restarts
-        #  self.ewma_alpha = ewma_alpha
-        self.ewma_alpha = 1
-        self.iter_counter = 1
-        self.ewma = torch.zeros(num_batches)
-        self.num_batches = num_batches
-        # sum of losses per batch for the current iteration
-        self.current_losses = torch.zeros(num_batches)
-        # count of evaluations per batch for the current iteration
-        self.current_counts = torch.zeros(num_batches)
-        self.zip_layers(model.parameters())
-        self.initialize_ewma()
-        self.kwargs["iter_callback"] = self.iter_callback
-
-    def zip_layers(self, layers_iter):
-        """Concatenate flattened layers into a single 1-D tensor.
-        This method also saves shapes of layers and their offsets in the final
-        tensor, allowing for a fast unzip operation.
-
-        Args:
-            layers_iter: Iterator over model's layers.
-        """
-        self._layers_offsets_shapes = []
-        tensors = []
-        current_offset = 0
-        xavier_coeffs = []
-        for param in layers_iter:
-            shape = param.shape
-            tmp = param.flatten()
-            current_offset += len(tmp)
-            self._layers_offsets_shapes.append((current_offset, shape))
-            tensors.append(tmp)
-            if len(shape) > 1:
-                fan_in, fan_out = torch.nn.init._calculate_fan_in_and_fan_out(param)
-                xavier_coeffs.extend([sqrt(6 / (fan_in + fan_out))] * len(tmp))
-            else:
-                xavier_coeffs.extend([xavier_coeffs[-1]] * len(tmp))
-        self.best_value = torch.cat(tensors, 0)
-        self.xavier_coeffs = torch.tensor(xavier_coeffs)
-
-    def initialize_ewma(self):
-        # XXX this is really ugly
-        for batch_idx, (b_x, y) in self.data_gen:
-            out = self.model(b_x)
-            loss = self.criterion(out, y).item()
-            self.ewma[batch_idx] = loss
-            if batch_idx >= self.num_batches - 1:
-                break
-
-    def unzip_layers(self, zipped_layers):
-        """Iterator over 'unzipped' layers, with their proper shapes.
-
-        Args:
-            zipped_layers: Flattened representation of layers.
-        """
-        start = 0
-        for offset, shape in self._layers_offsets_shapes:
-            #  yield zipped_layers[start:offset].view(shape)
-            yield zipped_layers[start:offset].view(shape)
-            start = offset
-
-    # @profile
-    def _objective_function(self, weights):
-        """Custom objective function for the NDES optimizer."""
-        #  X = Variable(torch.Tensor(self.X).float())
-        #  Y = Variable(torch.Tensor(self.Y).long())
-        for param, layer in zip(self.model.parameters(), self.unzip_layers(weights)):
-            #  param.data = layer
-            param.data.copy_(layer)
-        batch_idx, (b_x, y) = next(self.data_gen)
-        out = self.model(b_x)
-        loss = self.criterion(out, y).item()
-        self.current_losses[batch_idx] += loss
-        self.current_counts[batch_idx] += 1
-        return loss - self.ewma[batch_idx]
-
-    # @profile
-    def run(self, test_func=None):
-        """Optimize model's weights wrt. the given criterion.
-
-        Returns:
-            Optimized model.
-        """
-        self.test_func = test_func
-        with torch.no_grad():
-            for param in self.model.parameters():
-                param.requires_grad = False
-            if self.restarts is not None:
-                for i in range(self.restarts):
-                    ndes = NDES(
-                        self.best_value,
-                        self._objective_function,
-                        population_initializer=self.population_initializer(
-                            self.best_value,
-                            self.kwargs["lambda_"],
-                            self.xavier_coeffs,
-                            self.kwargs["device"],
-                        ),
-                        xavier_coeffs=self.xavier_coeffs,
-                        log_id=i,
-                        **self.kwargs,
-                    )
-                    self.best_value = ndes.run()
-                    del ndes
-                    if self.test_func is not None:
-                        self.test_model(self.best_value)
-                    gc.collect()
-                    torch.cuda.empty_cache()
-            else:
-                ndes = NDES(
-                    self.best_value,
-                    self._objective_function,
-                    population_initializer=self.population_initializer(
-                        self.best_value,
-                        self.kwargs["lambda_"],
-                        self.xavier_coeffs,
-                        self.kwargs["device"],
-                    ),
-                    xavier_coeffs=self.xavier_coeffs,
-                    test_func=self.validate_and_test,
-                    **self.kwargs,
-                )
-                self.best_value = ndes.run()
-            for param, layer in zip(
-                self.model.parameters(), self.unzip_layers(self.best_value)
-            ):
-                #  param.data = layer
-                param.data.copy_(layer)
-            return self.model
-
-    # @profile
-    def test_model(self, weights):
-        end = timer()
-        model = self.model
-        for param, layer in zip(model.parameters(), self.unzip_layers(weights)):
-            #  param.data = layer
-            param.data.copy_(layer)
-        print(f"\nPerf after {seconds_to_human_readable(end - self.start)}")
-        return self.test_func(model)
-
-    def iter_callback(self):
-        self.ewma *= 1 - self.ewma_alpha
-        # calculate normal average for each batch and include it in the EWMA
-        self.ewma += self.ewma_alpha * (self.current_losses / self.current_counts)
-        # reset stats for the new iteration
-        self.current_losses = torch.zeros(self.num_batches)
-        # XXX ones to prevent 0 / 0
-        self.current_counts = torch.ones(self.num_batches)
-        self.ewma_alpha = 1 / (self.iter_counter ** (1 / 3))
-        self.iter_counter += 1
-        #  print(f"|alpha|: {self.ewma_alpha:.4f}")
-        #  print(f"|ewma|: {self.ewma:.4f}")
-
-    # @profile
-    def find_best(self, population):
-        min_loss = torch.finfo(torch.float32).max
-        best_idx = None
-        for i in range(population.shape[1]):
-            for param, layer in zip(
-                self.model.parameters(), self.unzip_layers(population[:, i])
-            ):
-                #  param.data = layer
-                param.data.copy_(layer)
-            out = self.model(self.x_val)
-            loss = self.criterion(out, self.y_val).item()
-            if loss < min_loss:
-                min_loss = loss
-                best_idx = i
-        return population[:, best_idx].clone()
-
-    def validate_and_test(self, population):
-        best_individual = self.find_best(population)
-        return self.test_model(best_individual), best_individual
+class SecondaryMutation(Enum):
+    RandomNoise = 1
+    Gradient = 2
 
 
 class NDES:
 
-    """Docstring for NDES. """
+    """neural Differential Evolution Strategy (nDES) implementation."""
 
     def __init__(
         self, initial_value, fn, lower, upper, population_initializer, **kwargs
@@ -313,6 +96,9 @@ class NDES:
         self.start = timer()
         self.test_func = kwargs.get("test_func", None)
         self.iter_callback = kwargs.get("iter_callback", None)
+        self.log_dir = kwargs.get("log_dir", ".")
+        create_directory(self.log_dir)
+        self.secondary_mutation = kwargs.get("secondary_mutation", None)
 
     # @profile
     def _fitness_wrapper(self, x):
@@ -399,10 +185,12 @@ class NDES:
         assert len(self.lower) == self.problem_size
         assert (self.lower < self.upper).all()
 
+        print(f"Running nDES for a problem of size {self.problem_size}")
+
         # The best fitness found so far
-        self.best_fit = self.worst_fitness
+        self.best_fitness = self.worst_fitness
         # The best solution found so far
-        self.best_par = None
+        self.best_solution = None
         # The worst solution found so far
         self.worst_fit = None
 
@@ -444,7 +232,12 @@ class NDES:
             torch.cuda.empty_cache()
             cum_mean = (self.upper + self.lower) / 2
 
-            population = self.population_initializer.get_new_population(lower=self.lower, upper=self.upper)
+            population = self.population_initializer.get_new_population(
+                lower=self.lower, upper=self.upper
+            ).contiguous()
+
+            if self.lamarckism:
+                population = bounce_back_boundary_2d(population, self.lower, self.upper)
 
             #  start = timer()
             fitness = self._fitness_lamarckian(population)
@@ -460,7 +253,8 @@ class NDES:
             sorted_weights_pop = self.weights_pop[sorting_idx]
             pop_mean = population.matmul(sorted_weights_pop)
 
-            #  chi_N = sqrt(self.problem_size)
+            if self.secondary_mutation == SecondaryMutation.RandomNoise:
+                chi_N = sqrt(self.problem_size)
             hist_norm = 1 / sqrt(2)
 
             stoptol = False
@@ -512,15 +306,20 @@ class NDES:
                 # Sample from history with uniform distribution
                 diffs_cpu = self.get_diffs(hist_head, history, d_mean, pc)
                 population.copy_(diffs_cpu)
+                diffs_shape = diffs_cpu.shape
                 del diffs_cpu
 
                 # New population
-                population += new_mean.unsqueeze(1) * self.Ft
-                #  population.copy_(diffs)
-                #  population = diffs  # +
-                # self.tol *
-                # (1 - 2 / sqrt(self.problem_size)) ** (self.iter_ / 2) *
-                # torch.randn(diffs.shape, device=self.device, dtype=self.dtype) / chi_N)
+                population *= self.Ft
+                population += new_mean.unsqueeze(1)
+
+                if self.secondary_mutation == SecondaryMutation.RandomNoise:
+                    population += (
+                        self.tol
+                        * (1 - 2 / sqrt(self.problem_size)) ** (self.iter_ / 2)
+                        * torch.randn(diffs_shape, device=self.device, dtype=self.dtype)
+                        / chi_N
+                    )
 
                 if self.lamarckism:
                     population = bounce_back_boundary_2d(
@@ -545,10 +344,16 @@ class NDES:
 
                 wb = fitness.argmin()
                 print(f"best fitness: {fitness[wb]}")
-                print(f"mean fitness: {fitness.clamp(0, 2.5).mean()}")
+                print(f"mean fitness: {fitness.clamp(0, self.worst_fitness).mean()}")
                 iter_log["best_fitness"] = fitness[wb].item()
-                iter_log["mean_fitness"] = fitness.clamp(0, 2.5).mean().item()
+                iter_log["mean_fitness"] = (
+                    fitness.clamp(0, self.worst_fitness).mean().item()
+                )
                 iter_log["iter"] = self.iter_
+
+                if self.test_func is None and fitness[wb] < self.best_fitness:
+                    self.best_fitness = fitness[wb].item()
+                    self.best_solution = population[:, wb]
 
                 # Check worst fit
                 ww = fitness.argmax()
@@ -569,6 +374,10 @@ class NDES:
                 print(f"fn_cum: {fn_cum}")
                 iter_log["fn_cum"] = fn_cum
 
+                if self.test_func is None and fn_cum < self.best_fitness:
+                    self.best_fitness = fn_cum
+                    self.best_solution = cum_mean_repaired
+
                 if fitness[0] <= self.stopfitness:
                     break
 
@@ -578,8 +387,11 @@ class NDES:
                 ):
                     stoptol = True
                 print(f"iter={self.iter_}")
+                iter_log["best_found"] = self.best_fitness
                 if self.iter_ % 50 == 0 and self.test_func is not None:
-                    (test_loss, test_acc), self.best_par = self.test_func(population)
+                    (test_loss, test_acc), self.best_solution = self.test_func(
+                        population
+                    )
                 else:
                     test_loss, test_acc = None, None
 
@@ -587,11 +399,11 @@ class NDES:
                 iter_log["test_acc"] = test_acc
                 log_ = log_.append(iter_log, ignore_index=True)
                 if self.iter_ % 50 == 0:
-                    log_.to_csv(f"ndes_log_{self.start}.csv")
+                    log_.to_csv(f"{self.log_dir}/ndes_log_{self.start}.csv")
 
                 if self.iter_callback:
                     self.iter_callback()
 
         log_.to_csv(f"ndes_log_{self.start}.csv")
         #  np.save(f"times_{self.problem_size}.npy", np.array(evaluation_times))
-        return self.best_par  # , log_
+        return self.best_solution  # , log_

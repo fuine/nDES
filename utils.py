@@ -1,3 +1,4 @@
+import os
 import random
 
 import numpy as np
@@ -6,6 +7,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from gpu_utils import bounce_back_boundary_2d as bounce_back_boundary_2d_cuda
+
+
+def create_directory(directory: str) -> None:
+    if not os.path.exists(directory):
+        os.makedirs(directory)
 
 
 def seed_everything(offset=0):
