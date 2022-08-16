@@ -8,6 +8,7 @@ from timeit import default_timer as timer
 import numpy as np
 import pandas as pd
 import torch
+import wandb
 
 from gpu_utils import create_sorted_weights_for_matmul, fitness_nonlamarckian
 from utils import bounce_back_boundary_1d, bounce_back_boundary_2d, create_directory
@@ -188,7 +189,7 @@ class NDES:
         print(f"Running nDES for a problem of size {self.problem_size}")
 
         # The best fitness found so far
-        self.best_fitness = self.worst_fitness
+        self.best_fitness = self.worst_fitness #jakie jest w takim wypadku solution dla best_fitness, program wybucha
         # The best solution found so far
         self.best_solution = None
         # The worst solution found so far
@@ -215,7 +216,8 @@ class NDES:
             ]
         )
         #  evaluation_times = []
-        while self.count_eval < self.budget:  # and self.iter_ < self.max_iter:
+        self.iter_ = -1
+        while self.count_eval < self.budget: # and self.iter_ < self.max_iter:
 
             hist_head = -1
             self.iter_ = -1
@@ -288,7 +290,7 @@ class NDES:
                 tmp = new_mean - pop_mean
                 d_mean[:, hist_head] = (tmp / self.Ft).cpu()
 
-                step = ((new_mean - old_mean) / self.Ft).cpu()
+                step = ((new_mean - old_mean.cuda()) / self.Ft).cpu()
 
                 # Update parameters
                 if hist_head == 0:
@@ -351,7 +353,7 @@ class NDES:
                 )
                 iter_log["iter"] = self.iter_
 
-                if self.test_func is None and fitness[wb] < self.best_fitness:
+                if self.test_func is None and (fitness[wb] < self.best_fitness):
                     self.best_fitness = fitness[wb].item()
                     self.best_solution = population[:, wb]
 
@@ -400,7 +402,7 @@ class NDES:
                 log_ = log_.append(iter_log, ignore_index=True)
                 if self.iter_ % 50 == 0:
                     log_.to_csv(f"{self.log_dir}/ndes_log_{self.start}.csv")
-
+                wandb.log(iter_log)
                 if self.iter_callback:
                     self.iter_callback()
 

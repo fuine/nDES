@@ -37,6 +37,7 @@ class XavierMVNPopulationInitializer(BasePopulationInitializer):
     def get_new_population(self, lower, upper):
         population = self.normal.sample().to(self.device)
         population *= self.xavier_coeffs[:, None]
+        self.initial_value = self.initial_value.cuda()
         population += self.initial_value[:, None]
         population[:, 0] = self.initial_value
         return bounce_back_boundary_2d(population, lower, upper)

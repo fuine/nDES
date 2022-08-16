@@ -24,13 +24,14 @@ class FitnessEWMALogger:
         self.ewma = torch.zeros(self.num_batches)
         # FIXME
         # sum of losses per batch for the current iteration
-        self.current_losses = torch.zeros(self.num_batches)
+        self.current_losses = torch.zeros(self.num_batches).to(model.device)
         # count of evaluations per batch for the current iteration
-        self.current_counts = torch.zeros(self.num_batches)
+        self.current_counts = torch.zeros(self.num_batches).to(model.device)
         self.set_initial_losses(data_gen, model, criterion)
 
     def set_initial_losses(self, data_gen, model, criterion):
         # XXX this is really ugly
+        model.cuda()
         for batch_idx, (b_x, y) in data_gen:
             out = model(b_x)
             loss = criterion(out, y).item()

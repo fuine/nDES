@@ -16,9 +16,15 @@ from ndes import SecondaryMutation
 from utils import seed_everything, train_via_ndes
 
 #  EPOCHS = 25000
-POPULATION_MULTIPLIER = 8
-POPULATION = int(POPULATION_MULTIPLIER * 4000)
-EPOCHS = int(POPULATION * 1200)
+# POPULATION_MULTIPLIER = 8
+# POPULATION = int(POPULATION_MULTIPLIER * 4000)
+# EPOCHS = int(POPULATION * 1200)
+import wandb
+
+#  EPOCHS = 25000
+POPULATION_MULTIPLIER = 1
+POPULATION = int(POPULATION_MULTIPLIER * 410)
+EPOCHS = int(POPULATION) * 200
 NDES_TRAINING = True
 
 DEVICE = torch.device("cuda:0")
@@ -116,6 +122,7 @@ class Net(pl.LightningModule):
         total = len(y)
 
         loss = F.nll_loss(y_hat, y)
+        self.log("val_loss", loss)
         return {"val_loss": loss, "correct": correct, "total": total}
 
     def test_step(self, batch, batch_idx):
@@ -180,6 +187,21 @@ class MyDatasetLoader:
 
 if __name__ == "__main__":
     seed_everything(SEED_OFFSET)
+
+    wandb.init(project="nDES-fuine", entity="mmatak", config={
+        "population_multiplier": POPULATION_MULTIPLIER,
+        "population": POPULATION,
+        "epochs": EPOCHS,
+        "ndes_training": NDES_TRAINING,
+        "device": DEVICE,
+        "bootstrap": BOOTSTRAP,
+        "model_name": MODEL_NAME,
+        "load_weights": LOAD_WEIGHTS,
+        "seed_offset": SEED_OFFSET,
+        "batch_size": BATCH_SIZE,
+        "validation_size": VALIDATION_SIZE,
+        "stratify": STRATIFY,
+    })
 
     model = Net().to(DEVICE)
     if LOAD_WEIGHTS:
@@ -254,3 +276,4 @@ if __name__ == "__main__":
         trainer = Trainer(gpus=1, early_stop_callback=early_stop_callback)
         trainer.fit(model)
         trainer.test(model)
+    wandb.finish()
