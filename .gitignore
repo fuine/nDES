@@ -5,8 +5,9 @@
 /gpu_utils/dist/
 /gpu_utils/gpu_utils.egg-info/
 /boostrap_adam.pth.tar
-/fashion_ndes_bootstrapped_6225.7086714.pth.tar
+/fashion_ndes_bootstrapped_*.pth.tar
 /.idea
 /__pycache__/
 /gpu_utils/tests/__pycache__/
 /ndes_logs/
+/models/
