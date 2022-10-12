@@ -406,6 +406,6 @@ class NDES:
                 if self.iter_callback:
                     self.iter_callback()
 
-        log_.to_csv(f"ndes_log_{self.start}.csv")
+        log_.to_csv(f"{self.log_dir}/ndes_log_{self.start}.csv")
         #  np.save(f"times_{self.problem_size}.npy", np.array(evaluation_times))
         return self.best_solution  # , log_
