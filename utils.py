@@ -6,6 +6,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from math import ceil
+from sklearn.model_selection import StratifiedKFold
 from gpu_utils import bounce_back_boundary_2d as bounce_back_boundary_2d_cuda
 
 
@@ -161,3 +163,20 @@ def bounce_back_boundary_2d(x, lower, upper):
     upper = upper[0]
     delta = upper - lower
     return bounce_back_boundary_2d_cuda(x, lower, upper, delta)
+
+
+def stratify(x_train, y_train, batch_size):
+    splitter = StratifiedKFold(
+        n_splits=ceil(len(x_train) / batch_size),
+        # random_state=(42 + SEED_OFFSET),
+    )
+    reordering = [
+        i
+        for _, batch in splitter.split(
+            np.arange(0, x_train.shape[0]), y_train.cpu().numpy()
+        )
+        for i in batch
+    ]
+    x_train = x_train[reordering, :]
+    y_train = y_train[reordering]
+    return x_train, y_train

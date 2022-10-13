@@ -13,7 +13,7 @@ from torchvision import datasets, transforms
 
 from ndes_optimizer import BasenDESOptimizer
 from ndes import SecondaryMutation
-from utils import seed_everything, train_via_ndes
+from utils import seed_everything, train_via_ndes, stratify
 
 #  EPOCHS = 25000
 # POPULATION_MULTIPLIER = 8
@@ -150,6 +150,16 @@ class Net(pl.LightningModule):
         return result
 
 
+def get_early_stop_callback():
+    return EarlyStopping(
+        monitor="val_loss",
+        min_delta=0.00,
+        patience=3,
+        verbose=False,
+        mode="min"
+    )
+
+
 def cycle(loader):
     while True:
         for element in enumerate(loader):
@@ -173,8 +183,8 @@ class MyDatasetLoader:
         self.i += 1
         if i < self.num_batches - 1:
             return i, (
-                self.x_train[idx : idx + self.batch_size],
-                self.y_train[idx : idx + self.batch_size],
+                self.x_train[idx: idx + self.batch_size],
+                self.y_train[idx: idx + self.batch_size],
             )
         elif i == self.num_batches - 1:
             output = i, (self.x_train[idx:], self.y_train[idx:])
@@ -212,37 +222,18 @@ if __name__ == "__main__":
         test_dataset = model.test_dataset
 
         if STRATIFY:
-            indices_x = []
-            indices_y = []
-            splitter = StratifiedKFold(
-                n_splits=ceil(len(x_train) / BATCH_SIZE),
-                # random_state=(42 + SEED_OFFSET),
-            )
-            reordering = [
-                i
-                for _, batch in splitter.split(
-                    np.arange(0, x_train.shape[0]), y_train.cpu().numpy()
-                )
-                for i in batch
-            ]
-            x_train = x_train[reordering, :]
-            y_train = y_train[reordering]
+            x_train, y_train = stratify(x_train, y_train, BATCH_SIZE)
 
         print(y_train.unique(return_counts=True))
 
         if BOOTSTRAP:
-            early_stop_callback = EarlyStopping(
-                monitor="val_loss",
-                min_delta=0.00,
-                patience=3,
-                verbose=False,
-                mode="min",
-            )
+            early_stop_callback = get_early_stop_callback()
             trainer = Trainer(gpus=1, callbacks=[early_stop_callback])
             trainer.fit(model)
             trainer.test(model)
+            torch.save({"state_dict": model.state_dict()}, "boostrap_adam.pth.tar")
+
         print(f"Num params: {sum([param.nelement() for param in model.parameters()])}")
-        torch.save({"state_dict": model.state_dict()}, "boostrap_adam.pth.tar")
 
         criterion = nn.CrossEntropyLoss()
         train_loader = MyDatasetLoader(x_train, y_train, BATCH_SIZE)
@@ -271,9 +262,7 @@ if __name__ == "__main__":
         )
         train_via_ndes(model, ndes_optim, DEVICE, test_dataset, MODEL_NAME)
     else:
-        early_stop_callback = EarlyStopping(
-            monitor="val_loss", min_delta=0.00, patience=3, verbose=False, mode="min"
-        )
+        early_stop_callback = get_early_stop_callback()
         trainer = Trainer(gpus=1, early_stop_callback=early_stop_callback)
         trainer.fit(model)
         trainer.test(model)
