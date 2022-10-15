@@ -209,7 +209,9 @@ class BasenDESOptimizer:
                     test_func=test_func,
                 )
             )
+            # restarty w obecnej konfiguracji są none
             if self.restarts is not None:
+
                 for i in range(self.restarts):
                     self.kwargs["population_initializer"] = self.population_initializer(
                         best_value, *population_initializer_args

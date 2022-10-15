@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
-from sklearn.model_selection import StratifiedKFold, train_test_split
+from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, TensorDataset
 from torchvision import datasets, transforms
 
