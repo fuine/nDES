@@ -8,7 +8,9 @@
 /fashion_ndes_bootstrapped_*.pth.tar
 /.idea
 /__pycache__/
+gan/__pycache__/
 /gpu_utils/tests/__pycache__/
 /ndes_logs/
 /models/
 /notebooks/data
+/gan/data
