@@ -7,6 +7,7 @@ from torchvision import transforms
 from gan_experiment import Generator
 import torch.utils.data
 
+
 def get_noise_for_nn(latent_dim, n_examples, device):
     return get_fixed_noise(n_examples, latent_dim, device)
 

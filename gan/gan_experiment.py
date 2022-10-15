@@ -13,6 +13,8 @@ from ndes_optimizer import BasenDESOptimizer
 from ndes import SecondaryMutation
 from utils import seed_everything, train_via_ndes, stratify
 
+from datasource import get_train_images_dataset, create_loader_for_dataset
+
 POPULATION_MULTIPLIER = 1
 POPULATION = int(POPULATION_MULTIPLIER * 200)
 EPOCHS = int(POPULATION) * 10
@@ -63,12 +65,37 @@ class Discriminator(nn.Module):
         x = self.fc_out(x)
         return x
 
+
+def create_base_ndes_parametizer(model, train_loader):
+    criterion = nn.CrossEntropyLoss()
+    return BasenDESOptimizer(
+        model=model,
+        criterion=criterion,
+        data_gen=train_loader,
+        use_fitness_ewma=True,
+        log_dir="ndes_logs/",
+        lr=1e-3, #a cziemu?
+        secondary_mutation=SecondaryMutation.Gradient
+    )
+
 if __name__ == "__main__":
     seed_everything(SEED_OFFSET)
+
+    train_loader_config = {
+        'batch_size': 64,
+        'shuffle': True,
+        'drop_last': True,
+        'pin_memory': True,
+        'num_workers': 4
+    }
+
+    train_dataset = get_train_images_dataset()
+    train_loader = create_loader_for_dataset(train_dataset, **train_loader_config)
 
     if LOAD_WEIGHTS:
         raise Exception("Not yet implemented")
 
+    discriminator = Discriminator(input_dim=784, hidden_dim=256)
     if NDES_TRAINING:
         if STRATIFY:
             raise Exception("Not yet implemented")
@@ -77,6 +104,7 @@ if __name__ == "__main__":
         # generate fixed noise
         # 1. teach discriminator via ndes
         # 2. teach generator via ndes
+
 
     else:
         raise Exception("Not yet implemented")
