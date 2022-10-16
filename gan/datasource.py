@@ -42,7 +42,7 @@ def get_batch_from_data_loader(data_loader):
     return next(iter(data_loader))[0]
 
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
     # device = torch.device("cuda:0")
     # latent_dim = 32
     #
@@ -63,6 +63,3 @@ if __name__ == "__main__":
     # generator = Generator(latent_dim=latent_dim, hidden_dim=256, output_dim=784).to(device)
     # fake = generator(get_noise_for_nn(latent_dim, 25, device)).detach().cpu()
     # show_images_from_tensor(fake)
-    sth = (5,)
-    print(type(sth))
-    print(int((5)))

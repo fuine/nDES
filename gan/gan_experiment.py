@@ -12,8 +12,9 @@ from torchvision import datasets, transforms
 from ndes_optimizer import BasenDESOptimizer
 from ndes import SecondaryMutation
 from utils import seed_everything, train_via_ndes, stratify
+from fashion_mnist_experiment import MyDatasetLoader
 
-from datasource import get_train_images_dataset, create_loader_for_dataset
+from datasource import get_train_images_dataset
 
 POPULATION_MULTIPLIER = 1
 POPULATION = int(POPULATION_MULTIPLIER * 200)
@@ -21,13 +22,13 @@ EPOCHS = int(POPULATION) * 10
 NDES_TRAINING = True
 
 DEVICE = torch.device("cuda:0")
-BOOTSTRAP = True
-MODEL_NAME = "fashion_ndes_bootstrapped"
+BOOTSTRAP = False
+MODEL_NAME = "gan_ndes"
 LOAD_WEIGHTS = False
 SEED_OFFSET = 0
 BATCH_SIZE = 64
 VALIDATION_SIZE = 10000
-STRATIFY = True
+STRATIFY = False
 
 
 class Generator(pl.LightningModule):
@@ -48,7 +49,7 @@ class Generator(pl.LightningModule):
         return x_hat
 
 
-class Discriminator(nn.Module):
+class Discriminator(pl.LightningModule):
     def __init__(self, input_dim, hidden_dim):
         super(Discriminator, self).__init__()
 
@@ -66,18 +67,6 @@ class Discriminator(nn.Module):
         return x
 
 
-def create_base_ndes_parametizer(model, train_loader):
-    criterion = nn.CrossEntropyLoss()
-    return BasenDESOptimizer(
-        model=model,
-        criterion=criterion,
-        data_gen=train_loader,
-        use_fitness_ewma=True,
-        log_dir="ndes_logs/",
-        lr=1e-3, #a cziemu?
-        secondary_mutation=SecondaryMutation.Gradient
-    )
-
 if __name__ == "__main__":
     seed_everything(SEED_OFFSET)
 
@@ -88,19 +77,47 @@ if __name__ == "__main__":
         'pin_memory': True,
         'num_workers': 4
     }
+    ndes_config = {
+        'history': 16,
+        'worst_fitness': 3,
+        'Ft': 1,
+        'ccum': 0.96,
+        # 'cp': 0.1,
+        'lower': -2.0,
+        'upper': 2.0,
+        'log_dir': "ndes_logs/",
+        'tol': 1e-6,
+        'budget': EPOCHS,
+        'device': DEVICE
+    }
+    criterion = nn.MSELoss()
 
     train_dataset = get_train_images_dataset()
-    train_loader = create_loader_for_dataset(train_dataset, **train_loader_config)
+    x_train = train_dataset.data.float().to(DEVICE)
+    y_train = torch.unsqueeze(torch.zeros_like(train_dataset.targets, dtype=torch.float), 1).to(DEVICE)
+    train_loader = MyDatasetLoader(x_train, y_train, BATCH_SIZE)
+    discriminator = Discriminator(hidden_dim=256, input_dim=784).to(DEVICE)
 
     if LOAD_WEIGHTS:
         raise Exception("Not yet implemented")
 
-    discriminator = Discriminator(input_dim=784, hidden_dim=256)
     if NDES_TRAINING:
         if STRATIFY:
             raise Exception("Not yet implemented")
         if BOOTSTRAP:
             raise Exception("Not yet implemented")
+        discriminator_ndes_optim = BasenDESOptimizer(
+            model=discriminator,
+            criterion=criterion,
+            data_gen=train_loader,
+            ndes_config=ndes_config,
+            use_fitness_ewma=True,
+            restarts=None,
+            lr=1,
+            secondary_mutation=SecondaryMutation.Gradient,
+            lambda_=POPULATION,
+            device=DEVICE,
+        )
         # generate fixed noise
         # 1. teach discriminator via ndes
         # 2. teach generator via ndes

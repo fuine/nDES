@@ -31,7 +31,7 @@ class GanNDESOptimizer:
         """
         self._layers_offsets_shapes = []
         self.model = model
-        self.device = model.device()
+        self.device = model.device
         self.criterion = criterion
         self.population_initializer = population_initializer
         self.use_fitness_ewma = use_fitness_ewma
