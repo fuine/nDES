@@ -235,29 +235,33 @@ if __name__ == "__main__":
 
         print(f"Num params: {sum([param.nelement() for param in model.parameters()])}")
 
+        ndes_config = {
+            'history': 16,
+            'worst_fitness': 3,
+            'Ft': 1,
+            'ccum': 0.96,
+            # 'cp': 0.1,
+            'lower': -2.0,
+            'upper': 2.0,
+            'log_dir': "ndes_logs/",
+            'tol': 1e-6,
+            'budget': EPOCHS,
+            'device': DEVICE
+        }
         criterion = nn.CrossEntropyLoss()
         train_loader = MyDatasetLoader(x_train, y_train, BATCH_SIZE)
         ndes_optim = BasenDESOptimizer(
             model=model,
             criterion=criterion,
             data_gen=train_loader,
+            ndes_config=ndes_config,
             use_fitness_ewma=True,
             x_val=x_val,
             y_val=y_val,
             restarts=None,
-            log_dir="ndes_logs/",
             lr=1,
             secondary_mutation=SecondaryMutation.Gradient,
-            Ft=1,
-            ccum=0.96,
-            # cp=0.1,
-            lower=-2.0,
-            upper=2.0,
-            budget=EPOCHS,
-            tol=1e-6,
             lambda_=POPULATION,
-            history=16,
-            worst_fitness=3,
             device=DEVICE,
         )
         train_via_ndes(model, ndes_optim, DEVICE, test_dataset, MODEL_NAME)

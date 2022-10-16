@@ -23,6 +23,7 @@ class BasenDESOptimizer:
         model,
         criterion,
         data_gen,
+        ndes_config,
         x_val=None,
         y_val=None,
         use_fitness_ewma=False,
@@ -47,6 +48,7 @@ class BasenDESOptimizer:
         self._layers_offsets_shapes = []
         self.model = model
         self.criterion = criterion
+        self.ndes_config = ndes_config
         self.population_initializer = population_initializer
         self.data_gen = data_gen
         self.x_val = x_val
@@ -55,15 +57,15 @@ class BasenDESOptimizer:
         self.kwargs = kwargs
         self.restarts = restarts
         self.start = timer()
-        if restarts is not None and self.kwargs.get("budget") is not None:
-            self.kwargs["budget"] //= restarts
+        if restarts is not None and self.ndes_config.get("budget") is not None:
+            self.ndes_config["budget"] //= restarts
         self.initial_value = self.zip_layers(model.parameters())
         self.xavier_coeffs = self.calculate_xavier_coefficients(model.parameters())
         self.secondary_mutation = kwargs.get("secondary_mutation", None)
         self.lr = lr
         if use_fitness_ewma:
             self.ewma_logger = FitnessEWMALogger(data_gen, model, criterion)
-            self.kwargs["iter_callback"] = self.ewma_logger.update_after_iteration
+            self.ndes_config["iter_callback"] = self.ewma_logger.update_after_iteration
 
     def zip_layers(self, layers_iter):
         """Concatenate flattened layers into a single 1-D tensor.
@@ -159,15 +161,16 @@ class BasenDESOptimizer:
                 test_func = self.validate_and_test
             else:
                 test_func = None
-            self.kwargs.update(
-                dict(
-                    initial_value=best_value,
-                    fn=self._objective_function,
-                    xavier_coeffs=self.xavier_coeffs,
-                    population_initializer=population_initializer,
-                    test_func=test_func,
-                )
-            )
+            determined_config = {
+                'initial_value': best_value,
+                'fn': self._objective_function,
+                'xavier_coeffs': self.xavier_coeffs,
+                'population_initializer': population_initializer,
+                'test_func': test_func,
+                'secondary_mutation': self.secondary_mutation,
+                'lambda_': self.kwargs.get("lambda_")
+            }
+            self.ndes_config = self.ndes_config | determined_config
             # restarty w obecnej konfiguracji są none
             if self.restarts is not None:
 
@@ -175,7 +178,7 @@ class BasenDESOptimizer:
                     self.kwargs["population_initializer"] = self.population_initializer(
                         best_value, *population_initializer_args
                     )
-                    ndes = NDES(log_id=i, **self.kwargs)
+                    ndes = NDES(log_id=i, **self.ndes_config)
                     best_value = ndes.run()
                     del ndes
                     if self.test_func is not None:
@@ -183,7 +186,7 @@ class BasenDESOptimizer:
                     gc.collect()
                     torch.cuda.empty_cache()
             else:
-                ndes = NDES(**self.kwargs)
+                ndes = NDES(**self.ndes_config)
                 best_value = ndes.run()
             self._reweight_model(best_value)
             return self.model
