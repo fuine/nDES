@@ -6,13 +6,13 @@ import cma
 import numpy as np
 import torch
 
-from ndes import NDES, SecondaryMutation
-from population_initializers import (
+from src.classic.ndes import NDES, SecondaryMutation
+from src.classic.population_initializers import (
     StartFromUniformPopulationInitializer,
     XavierMVNPopulationInitializer,
 )
 from utils import seconds_to_human_readable
-from fitness_EWMA_logger import FitnessEWMALogger
+from src.classic.fitness_EWMA_logger import FitnessEWMALogger
 
 
 class BasenDESOptimizer:

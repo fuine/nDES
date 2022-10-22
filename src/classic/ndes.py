@@ -11,7 +11,7 @@ import torch
 import wandb
 
 from gpu_utils import create_sorted_weights_for_matmul, fitness_nonlamarckian
-from utils import bounce_back_boundary_1d, bounce_back_boundary_2d, create_directory
+from src.classic.utils import bounce_back_boundary_1d, bounce_back_boundary_2d, create_directory
 
 
 class SecondaryMutation(Enum):

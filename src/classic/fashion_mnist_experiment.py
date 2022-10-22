@@ -9,9 +9,9 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, TensorDataset
 from torchvision import datasets, transforms
 
-from ndes_optimizer import BasenDESOptimizer
-from ndes import SecondaryMutation
-from utils import seed_everything, train_via_ndes, stratify
+from src.classic.ndes_optimizer import BasenDESOptimizer
+from src.classic.ndes import SecondaryMutation
+from src.classic.utils import seed_everything, train_via_ndes, stratify
 
 from src.data_loaders.my_data_set_loader import MyDatasetLoader
 #  EPOCHS = 25000
