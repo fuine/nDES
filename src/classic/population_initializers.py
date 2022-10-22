@@ -2,7 +2,7 @@ import torch
 from torch.distributions import MultivariateNormal, Uniform
 from abc import ABC, abstractmethod
 
-from utils import bounce_back_boundary_2d
+from src.classic.utils import bounce_back_boundary_2d
 
 
 class BasePopulationInitializer(ABC):

@@ -6,13 +6,13 @@ import cma
 import numpy as np
 import torch
 
-from ndes import NDES, SecondaryMutation
-from population_initializers import (
+from src.classic.ndes import NDES, SecondaryMutation
+from src.classic.population_initializers import (
     StartFromUniformPopulationInitializer,
     XavierMVNPopulationInitializer,
 )
-from utils import seconds_to_human_readable
-from fitness_EWMA_logger import FitnessEWMALogger
+from src.classic.utils import seconds_to_human_readable
+from src.classic.fitness_EWMA_logger import FitnessEWMALogger
 
 
 #TODO refactor działania na zbiorach
@@ -160,33 +160,33 @@ class BasenDESOptimizer:
                 best_value, *population_initializer_args
             )
             if self.x_val is not None:
-                test_func = self.validate_and_test
+                val_test_func = self.validate_and_test
             else:
-                test_func = None
+                val_test_func = None
             determined_config = {
                 'initial_value': best_value,
                 'fn': self._objective_function,
                 'xavier_coeffs': self.xavier_coeffs,
                 'population_initializer': population_initializer,
-                'test_func': test_func,
+                'test_func': val_test_func,
                 'secondary_mutation': self.secondary_mutation,
                 'lambda_': self.kwargs.get("lambda_")
             }
             self.ndes_config = self.ndes_config | determined_config
             # restarty w obecnej konfiguracji są none
             if self.restarts is not None:
-
-                for i in range(self.restarts):
-                    self.kwargs["population_initializer"] = self.population_initializer(
-                        best_value, *population_initializer_args
-                    )
-                    ndes = NDES(log_id=i, **self.ndes_config)
-                    best_value = ndes.run()
-                    del ndes
-                    if self.test_func is not None:
-                        self.test_model(best_value)
-                    gc.collect()
-                    torch.cuda.empty_cache()
+                pass
+                # for i in range(self.restarts):
+                    # self.kwargs["population_initializer"] = self.population_initializer(
+                    #     best_value, *population_initializer_args
+                    # )
+                    # ndes = NDES(log_id=i, **self.ndes_config)
+                    # best_value = ndes.run()
+                    # del ndes
+                    # if self.test_func is not None:
+                    #     self.test_model(best_value)
+                    # gc.collect()
+                    # torch.cuda.empty_cache()
             else:
                 ndes = NDES(**self.ndes_config)
                 best_value = ndes.run()

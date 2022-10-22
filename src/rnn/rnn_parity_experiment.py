@@ -1,4 +1,3 @@
-from random import randint
 from timeit import default_timer as timer
 
 import numpy as np
@@ -10,7 +9,7 @@ from torch import nn
 from torch.nn.utils.rnn import pack_sequence, pad_packed_sequence
 from torch.utils.data import DataLoader
 
-from ndes_optimizer import RNNnDESOptimizer
+from src.classic.ndes_optimizer import RNNnDESOptimizer
 from utils_rnn import DummyDataGenerator, DummyDataset, pad_collate, parse_args
 
 DEVICE = torch.device("cuda:0")
@@ -20,7 +19,7 @@ torch.cuda.set_device(DEVICE)
 class Net(pl.LightningModule):
     def __init__(self):
         super(Net, self).__init__()
-        self.rnn = nn.RNN(2, 4, batch_first=True)
+        self.rnn = nn.RNN(1, 4, batch_first=True)
         self.output = nn.Linear(4, 1)
 
     def forward(self, x, hidden=None):
@@ -43,34 +42,24 @@ class Net(pl.LightningModule):
         return torch.optim.Adam(self.parameters(), lr=0.01)
 
 
-def dataset_generator(num_samples, min_sample_length):
+def dataset_generator(num_samples, max_sample_length):
     dataset = []
     gts = []
-    max_sample_length = min_sample_length + int(min_sample_length / 10)
+    min_sample_length = max_sample_length // 2
     sizes = (
         np.random.default_rng()
         .uniform(min_sample_length, max_sample_length, num_samples)
         .astype(int)
     )
     for size in sizes:
-        values = np.random.default_rng().uniform(-1, 1, size)
-        x1_index = randint(0, min(10, size - 1))
-        x2_index = x1_index
-        while x2_index == x1_index:
-            x2_index = randint(0, int(min_sample_length / 2) - 1)
-
-        mask = np.zeros_like(values)
-        mask[x1_index] = 1
-        mask[x2_index] = 1
-        mask[0] = -1
-        mask[-1] = -1
-
-        x1 = values[x1_index] if x1_index != 0 else 0
-        x2 = values[x2_index] if x2_index != 0 else 0
-        gt = 0.5 + ((x1 + x2) / 4)
-        dataset.append(torch.tensor((values, mask)).permute(1, 0).float().to(DEVICE))
-        gts.append(gt)
-    return dataset, sizes.tolist(), torch.tensor(gts).float().to(DEVICE)
+        sample = np.random.default_rng().standard_t(5, size=size)
+        sample = (sample > 0).astype(int)
+        gt = (sample.sum() % 2) == 1
+        dataset.append(torch.tensor((sample * 2) - 1).unsqueeze(1).float().to(DEVICE))
+        gts.append(gt * 2 - 1)
+    #  dataset = torch.tensor(dataset).unsqueeze(1).permute(0, 2, 1).float()
+    gts = torch.tensor(gts).float().to(DEVICE)
+    return dataset, sizes.tolist(), gts
 
 
 def test_ndes(sequence_length):
@@ -93,7 +82,7 @@ def test_ndes(sequence_length):
         tol=1e-6,
         worst_fitness=3,
         device=DEVICE,
-        log_dir=f"rnn_addition_{sequence_length}",
+        log_dir=f"rnn_parity_{sequence_length}",
     )
 
     best = ndes.run()
@@ -121,9 +110,7 @@ def test_adam(sequence_length):
     loss = F.mse_loss(net(pack), gts)
     print(loss.item())
     timestamp = timer()
-    with open(
-        f"rnn_addition_{sequence_length}/adam_result_{timestamp}.csv", "w+"
-    ) as fh:
+    with open(f"rnn_parity_{sequence_length}/adam_result_{timestamp}.csv", "w+") as fh:
         fh.writelines(["best_found\r\n", str(loss.item())])
 
 
