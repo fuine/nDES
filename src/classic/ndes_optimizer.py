@@ -11,7 +11,7 @@ from src.classic.population_initializers import (
     StartFromUniformPopulationInitializer,
     XavierMVNPopulationInitializer,
 )
-from utils import seconds_to_human_readable
+from src.classic.utils import seconds_to_human_readable
 from src.classic.fitness_EWMA_logger import FitnessEWMALogger
 
 
