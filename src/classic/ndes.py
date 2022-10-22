@@ -97,7 +97,7 @@ class NDES:
         self.start = timer()
         self.test_func = kwargs.get("test_func", None)
         self.iter_callback = kwargs.get("iter_callback", None)
-        self.log_dir = kwargs.get("log_dir", ".")
+        self.log_dir = kwargs.get("log_dir", "../..")
         create_directory(self.log_dir)
         self.secondary_mutation = kwargs.get("secondary_mutation", None)
 

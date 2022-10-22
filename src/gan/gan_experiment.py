@@ -1,20 +1,13 @@
-import numpy as np
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from pytorch_lightning import Trainer
-from pytorch_lightning.callbacks.early_stopping import EarlyStopping
-from sklearn.model_selection import StratifiedKFold, train_test_split
-from torch.utils.data import DataLoader, TensorDataset
-from torchvision import datasets, transforms
 
-from ndes_optimizer import BasenDESOptimizer
-from ndes import SecondaryMutation
-from utils import seed_everything, train_via_ndes, stratify
-from fashion_mnist_experiment import MyDatasetLoader
+from src.classic.ndes_optimizer import BasenDESOptimizer
+from src.classic.ndes import SecondaryMutation
+from src.classic.utils import seed_everything
+from src.classic.fashion_mnist_experiment import MyDatasetLoader
 
-from datasource import get_train_images_dataset
+from src.data_loaders.datasource import get_train_images_dataset
 
 POPULATION_MULTIPLIER = 1
 POPULATION = int(POPULATION_MULTIPLIER * 200)

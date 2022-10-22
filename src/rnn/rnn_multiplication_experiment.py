@@ -10,7 +10,7 @@ from torch import nn
 from torch.nn.utils.rnn import pack_sequence, pad_packed_sequence
 from torch.utils.data import DataLoader
 
-from ndes_optimizer import RNNnDESOptimizer
+from src.classic.ndes_optimizer import RNNnDESOptimizer
 from utils_rnn import DummyDataGenerator, DummyDataset, pad_collate, parse_args
 
 DEVICE = torch.device("cuda:0")
