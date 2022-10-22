@@ -14,3 +14,4 @@ gan/__pycache__/
 /models/
 /notebooks/data
 /gan/data
+/data

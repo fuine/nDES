@@ -15,6 +15,8 @@ from utils import seconds_to_human_readable
 from fitness_EWMA_logger import FitnessEWMALogger
 
 
+#TODO refactor działania na zbiorach
+
 class BasenDESOptimizer:
     """Base interface for the nDES optimizer for the neural networks optimization."""
 
@@ -221,7 +223,9 @@ class BasenDESOptimizer:
         return population[:, best_idx].clone()
 
     def validate_and_test(self, population):
+        # walidacyjny dataset
         best_individual = self.find_best(population)
+        # testowy dataset
         return self.test_model(best_individual), best_individual
 
 

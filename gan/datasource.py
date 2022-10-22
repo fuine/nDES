@@ -9,10 +9,10 @@ import torch.utils.data
 
 
 def get_noise_for_nn(latent_dim, n_examples, device):
-    return get_fixed_noise(n_examples, latent_dim, device)
+    return get_noise(n_examples, latent_dim, device)
 
 
-def get_fixed_noise(x_size, y_size, device):
+def get_noise(x_size, y_size, device):
     return torch.randn(x_size, y_size, device=device)
 
 
