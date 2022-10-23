@@ -1,14 +1,10 @@
-import gc
 from math import sqrt
 from timeit import default_timer as timer
 
-import cma
-import numpy as np
 import torch
 
 from src.classic.ndes import NDES, SecondaryMutation
 from src.classic.population_initializers import (
-    StartFromUniformPopulationInitializer,
     XavierMVNPopulationInitializer,
 )
 from src.classic.utils import seconds_to_human_readable
@@ -151,13 +147,13 @@ class BasenDESOptimizer:
             requires_grad = self.secondary_mutation == SecondaryMutation.Gradient
             for param in self.model.parameters():
                 param.requires_grad = requires_grad
-            population_initializer_args = [
-                self.xavier_coeffs,
-                self.kwargs["device"],
-                self.kwargs.get("lambda_", None),
-            ]
+            population_initializer_kwargs = {
+                'xavier_coeffs': self.xavier_coeffs,
+                'device': self.kwargs["device"],
+                'lambda_': self.kwargs.get("lambda_", None),
+            }
             population_initializer = self.population_initializer(
-                best_value, *population_initializer_args
+                best_value, **population_initializer_kwargs
             )
             if self.x_val is not None:
                 val_test_func = self.validate_and_test
@@ -227,50 +223,3 @@ class BasenDESOptimizer:
         best_individual = self.find_best(population)
         # testowy dataset
         return self.test_model(best_individual), best_individual
-
-
-class RNNnDESOptimizer(BasenDESOptimizer):
-    """nDES optimizer for RNNs, uses different initialization strategy than base
-    optimizer."""
-
-    def __init__(
-        self,
-        *args,
-        population_initializer=StartFromUniformPopulationInitializer,
-        secondary_mutation=SecondaryMutation.RandomNoise,
-        **kwargs,
-    ):
-        super().__init__(
-            *args,
-            population_initializer=population_initializer,
-            secondary_mutation=secondary_mutation,
-            **kwargs,
-        )
-
-    def calculate_xavier_coefficients(self, layers_iter):
-        return torch.ones_like(self.initial_value) * 0.4
-
-
-class CMAESOptimizerRNN:
-    def __init__(self, model, criterion, data_gen, restarts=None, **kwargs):
-        self.model = model
-        self.criterion = criterion
-        self.data_gen = data_gen
-
-    def _objective_function(self, weights):
-        """Custom objective function for the DES optimizer."""
-        self.model.set_weights(weights)
-        _, (x_data, y_data) = next(self.data_gen)
-        predicted = np.array([self.model.forward(x) for x in x_data])
-        loss = self.criterion(y_data, predicted)
-        return loss
-
-    def run(self, test_func=None):
-        """Optimize model's weights wrt. the given criterion.
-
-        Returns:
-            Optimized model.
-        """
-        es = cma.CMAEvolutionStrategy(11 * [0], 1.5, {"verb_disp": 1, "maxiter": 1000})
-        es.optimize(self._objective_function)
-        return es.best.get()[0]
