@@ -29,7 +29,7 @@ class FitnessEWMALogger:
     def update_batch(self, batch_idx, loss):
         self.current_losses[batch_idx] += loss
         self.current_counts[batch_idx] += 1
-        return loss - self.ewma[batch_idx]
+        return loss - self.ewma[batch_idx]  # individual's fitness
 
     def update_after_iteration(self):
         self.ewma *= 1 - self.ewma_alpha

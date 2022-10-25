@@ -227,13 +227,14 @@ class NDES:
                 dtype=self.dtype,
                 device=self.cpu,
             )
-            self.Ft = self.initFt
+            self.Ft = self.initFt  # FIXME: czy ft jest gdzieś nadpisywane
             population = None
 
             gc.collect()
             torch.cuda.empty_cache()
             cum_mean = (self.upper + self.lower) / 2
 
+            # linia 2 - tworzenie nowej populacji
             population = self.population_initializer.get_new_population(
                 lower=self.lower, upper=self.upper
             ).contiguous()
@@ -248,11 +249,13 @@ class NDES:
 
             new_mean = torch.empty_like(self.initial_value)
             new_mean.copy_(self.initial_value)
+            # FIXME-nit: maybe a deep copy initial value will go
             self.worst_fit = fitness.max().item()
 
             # Store population and selection means
             sorting_idx = fitness.argsort()
             sorted_weights_pop = self.weights_pop[sorting_idx]
+            #  FIXME-question: are these being sorted -> check
             pop_mean = population.matmul(sorted_weights_pop)
 
             if self.secondary_mutation == SecondaryMutation.RandomNoise:
@@ -279,7 +282,7 @@ class NDES:
                 history[:, :, hist_head] *= hist_norm / self.Ft
 
                 # Calculate weighted mean of selected points
-                old_mean.copy_(new_mean)
+                old_mean.copy_(new_mean)  # FIXME-attention: does the previous value is being used?
                 sorted_weights.zero_()
                 sorted_weights = create_sorted_weights_for_matmul(
                     self.weights, sorting_idx.int(), sorted_weights, self.mu
@@ -292,6 +295,7 @@ class NDES:
 
                 step = ((new_mean - old_mean.cuda()) / self.Ft).cpu()
 
+                # linie 7-11
                 # Update parameters
                 if hist_head == 0:
                     pc[:, hist_head] = sqrt(self.mu * self.cp * (2 - self.cp)) * step
@@ -309,9 +313,11 @@ class NDES:
                 diffs_cpu = self.get_diffs(hist_head, history, d_mean, pc)
                 population.copy_(diffs_cpu)
                 diffs_shape = diffs_cpu.shape
+                # propably line 14
                 del diffs_cpu
 
                 # New population
+                # linia 16
                 population *= self.Ft
                 population += new_mean.unsqueeze(1)
 

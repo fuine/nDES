@@ -84,6 +84,17 @@ class BasenDESOptimizer:
             tensors.append(tmp)
         return torch.cat(tensors, 0).contiguous()
 
+    def unzip_layers(self, zipped_layers):
+        """Iterator over 'unzipped' layers, with their proper shapes.
+
+        Args:
+            zipped_layers: Flattened representation of layers.
+        """
+        start = 0
+        for offset, shape in self._layers_offsets_shapes:
+            yield zipped_layers[start:offset].view(shape)
+            start = offset
+
     @staticmethod
     def calculate_xavier_coefficients(layers_iter):
         xavier_coeffs = []
@@ -97,17 +108,6 @@ class BasenDESOptimizer:
             else:
                 xavier_coeffs.extend([xavier_coeffs[-1]] * param_num_elements)
         return torch.tensor(xavier_coeffs)
-
-    def unzip_layers(self, zipped_layers):
-        """Iterator over 'unzipped' layers, with their proper shapes.
-
-        Args:
-            zipped_layers: Flattened representation of layers.
-        """
-        start = 0
-        for offset, shape in self._layers_offsets_shapes:
-            yield zipped_layers[start:offset].view(shape)
-            start = offset
 
     # @profile
     def _objective_function(self, weights):
@@ -216,6 +216,7 @@ class BasenDESOptimizer:
             if loss < min_loss:
                 min_loss = loss
                 best_idx = i
+        print(min_loss)
         return population[:, best_idx].clone()
 
     def validate_and_test(self, population):
