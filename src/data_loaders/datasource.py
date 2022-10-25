@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from torchvision import transforms
 
-# from gan_experiment import Generator
+# from src.gan.gan_experiment import Generator
 import torch.utils.data
 
 
@@ -39,27 +39,27 @@ def create_loader_for_dataset(dataset, **kwargs):
 
 
 def get_batch_from_data_loader(data_loader):
-    return next(iter(data_loader))[0]
+    return next(iter(data_loader))
 
 
-# if __name__ == "__main__":
-    # device = torch.device("cuda:0")
-    # latent_dim = 32
-    #
-    # train_loader_config = {
-    #     'batch_size': 64,
-    #     'shuffle': True,
-    #     'drop_last': True,
-    #     'pin_memory': True,
-    #     'num_workers': 4
-    # }
-    #
-    # train_dataset = get_train_images_dataset()
-    # train_loader = create_loader_for_dataset(train_dataset, **train_loader_config)
-    #
-    # sample_images = get_batch_from_data_loader(train_loader)
-    # show_images_from_tensor(sample_images)
-    #
+if __name__ == "__main__":
+    device = torch.device("cuda:0")
+    latent_dim = 32
+
+    train_loader_config = {
+        'batch_size': 64,
+        'shuffle': True,
+        'drop_last': True,
+        'pin_memory': True,
+        'num_workers': 4
+    }
+
+    train_dataset = get_train_images_dataset()
+    train_loader = create_loader_for_dataset(train_dataset, **train_loader_config)
+
+    sample_images = get_batch_from_data_loader(train_loader)
+    show_images_from_tensor(sample_images[0])
+
     # generator = Generator(latent_dim=latent_dim, hidden_dim=256, output_dim=784).to(device)
     # fake = generator(get_noise_for_nn(latent_dim, 25, device)).detach().cpu()
     # show_images_from_tensor(fake)

@@ -217,7 +217,7 @@ class NDES:
         )
         #  evaluation_times = []
         self.iter_ = -1
-        while self.count_eval < self.budget: # and self.iter_ < self.max_iter:
+        while self.count_eval < self.budget:  # and self.iter_ < self.max_iter:
 
             hist_head = -1
             self.iter_ = -1
@@ -399,7 +399,7 @@ class NDES:
 
                 iter_log["test_loss"] = test_loss
                 iter_log["test_acc"] = test_acc
-                log_ = log_.append(iter_log, ignore_index=True)
+                log_ = pd.concat([log_, pd.DataFrame([iter_log])], ignore_index=True)
                 if self.iter_ % 50 == 0:
                     log_.to_csv(f"{self.log_dir}/ndes_log_{self.start}.csv")
                 wandb.log(iter_log)

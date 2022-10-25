@@ -119,6 +119,14 @@ def train_via_ndes(model, ndes, device, test_dataset, model_name):
     torch.save({"state_dict": model.state_dict()}, f"models/{model_name}_{ndes.start}.pth.tar")
 
 
+def train_via_ndes_without_test_dataset(model, ndes, device, model_name):
+    model.eval()
+
+    model = ndes.run()
+    # test(model, device, test_loader)
+    torch.save({"state_dict": model.state_dict()}, f"models/{model_name}_{ndes.start}.pth.tar")
+
+
 def train_via_gradient(
     model, criterion, optimizer, train_dataset, test_dataset, num_epoch, device
 ):
