@@ -13,7 +13,7 @@ from src.data_loaders.generator_data_loader import GeneratorDataLoader
 
 POPULATION_MULTIPLIER = 1
 POPULATION = int(POPULATION_MULTIPLIER * 50)
-EPOCHS = int(POPULATION) * 10
+EPOCHS = int(POPULATION) * 40
 NDES_TRAINING = True
 
 DEVICE = torch.device("cuda:0")
@@ -91,7 +91,7 @@ if __name__ == "__main__":
     }
     wandb.init(project="gan-nDES", entity="mmatak", config={**train_loader_config, **ndes_config})
 
-    criterion = nn.MSELoss()
+    criterion = nn.CrossEntropyLoss()
 
     discriminator = Discriminator(hidden_dim=256, input_dim=784).to(DEVICE)
     generator = Generator(latent_dim=32, hidden_dim=256, output_dim=784).to(DEVICE)
@@ -121,11 +121,10 @@ if __name__ == "__main__":
             lambda_=POPULATION,
             device=DEVICE,
         )
-        # print(discriminator(next(iter(x_train))))
         # train_via_ndes(discriminator, discriminator_ndes_optim, DEVICE, MODEL_NAME)
+        print(discriminator(train_loader.get_sample_images_gpu()))
         train_via_ndes_without_test_dataset(discriminator, discriminator_ndes_optim, DEVICE, MODEL_NAME)
-        # print(discriminator(next(iter(x_train))))
-        # print(discriminator(train_loader.get_sample_images_gpu()))
+        print(discriminator(train_loader.get_sample_images_gpu()))
         # generate noise
         # 1. teach discriminator via ndes
         # 2. teach generator via ndes

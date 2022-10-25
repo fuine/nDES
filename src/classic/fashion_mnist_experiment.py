@@ -168,7 +168,7 @@ def cycle(loader):
 if __name__ == "__main__":
     seed_everything(SEED_OFFSET)
 
-    wandb.init(project="nDES-fuine", entity="mmatak", config={
+    wandb.init(project="nDES-refactored", entity="mmatak", config={
         "population_multiplier": POPULATION_MULTIPLIER,
         "population": POPULATION,
         "epochs": EPOCHS,
