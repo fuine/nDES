@@ -216,7 +216,7 @@ class NDES:
             ]
         )
         #  evaluation_times = []
-        self.iter_ = -1
+        # self.iter_ = -1
         while self.count_eval < self.budget:  # and self.iter_ < self.max_iter:
 
             hist_head = -1

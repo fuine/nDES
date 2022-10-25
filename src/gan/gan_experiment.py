@@ -5,7 +5,7 @@ import wandb
 
 from src.classic.ndes_optimizer import BasenDESOptimizer
 from src.classic.ndes import SecondaryMutation
-from src.classic.utils import seed_everything, train_via_ndes_without_test_dataset
+from src.classic.utils import seed_everything, train_via_ndes_without_test_dataset, train_via_ndes
 from src.classic.fashion_mnist_experiment import MyDatasetLoader
 
 from src.data_loaders.datasource import get_train_images_dataset
@@ -93,13 +93,13 @@ if __name__ == "__main__":
 
     criterion = nn.MSELoss()
 
-    train_dataset = get_train_images_dataset()
-    x_train = train_dataset.data.float().to(DEVICE)
-    y_train = torch.unsqueeze(torch.zeros_like(train_dataset.targets, dtype=torch.float), 1).to(DEVICE)
-    # train_loader = MyDatasetLoader(x_train, y_train, BATCH_SIZE)
     discriminator = Discriminator(hidden_dim=256, input_dim=784).to(DEVICE)
     generator = Generator(latent_dim=32, hidden_dim=256, output_dim=784).to(DEVICE)
-    train_loader = GeneratorDataLoader(generator, BATCH_SIZE, DEVICE, BATCH_NUM)
+    train_dataset = get_train_images_dataset()
+    x_train = train_dataset.data.float().to(DEVICE)
+    y_train = torch.unsqueeze(torch.ones_like(train_dataset.targets, dtype=torch.float), 1).to(DEVICE)
+    train_loader = MyDatasetLoader(x_train, y_train, BATCH_SIZE)
+    # train_loader = GeneratorDataLoader(generator, BATCH_SIZE, DEVICE, BATCH_NUM)
 
     if LOAD_WEIGHTS:
         raise Exception("Not yet implemented")
@@ -121,9 +121,11 @@ if __name__ == "__main__":
             lambda_=POPULATION,
             device=DEVICE,
         )
-        print(discriminator(train_loader.get_sample_images_gpu()))
+        # print(discriminator(next(iter(x_train))))
+        # train_via_ndes(discriminator, discriminator_ndes_optim, DEVICE, MODEL_NAME)
         train_via_ndes_without_test_dataset(discriminator, discriminator_ndes_optim, DEVICE, MODEL_NAME)
-        print(discriminator(train_loader.get_sample_images_gpu()))
+        # print(discriminator(next(iter(x_train))))
+        # print(discriminator(train_loader.get_sample_images_gpu()))
         # generate noise
         # 1. teach discriminator via ndes
         # 2. teach generator via ndes

@@ -22,7 +22,7 @@ class GeneratorDataLoader:
     def __next__(self):
         # wyniki zwracane są na cuda
         # brzydkie
-        self.generator.zero_grad()
+        self.generator.eval()
         i = self.i
         self.i += 1
         output = i, (self.generator(self.get_noise_for_nn(self.generator.get_latent_dim(), self.batch_size, self.generator.device)),
