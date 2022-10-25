@@ -216,7 +216,6 @@ class BasenDESOptimizer:
             if loss < min_loss:
                 min_loss = loss
                 best_idx = i
-        print(min_loss)
         return population[:, best_idx].clone()
 
     def validate_and_test(self, population):

@@ -98,8 +98,8 @@ if __name__ == "__main__":
     train_dataset = get_train_images_dataset()
     x_train = train_dataset.data.float().to(DEVICE)
     y_train = torch.unsqueeze(torch.ones_like(train_dataset.targets, dtype=torch.float), 1).to(DEVICE)
-    train_loader = MyDatasetLoader(x_train, y_train, BATCH_SIZE)
-    # train_loader = GeneratorDataLoader(generator, BATCH_SIZE, DEVICE, BATCH_NUM)
+    # train_loader = MyDatasetLoader(x_train, y_train, BATCH_SIZE)
+    train_loader = GeneratorDataLoader(generator, BATCH_SIZE, DEVICE, BATCH_NUM)
 
     if LOAD_WEIGHTS:
         raise Exception("Not yet implemented")
