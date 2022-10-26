@@ -13,7 +13,7 @@ from src.data_loaders.generator_data_loader import GeneratorDataLoader
 
 POPULATION_MULTIPLIER = 1
 POPULATION = int(POPULATION_MULTIPLIER * 50)
-EPOCHS = int(POPULATION) * 40
+EPOCHS = int(POPULATION) * 10
 NDES_TRAINING = True
 
 DEVICE = torch.device("cuda:0")
@@ -79,7 +79,7 @@ if __name__ == "__main__":
     ndes_config = {
         'history': 16,
         'worst_fitness': 3,
-        'Ft': 1,
+        'Ft': 100,
         'ccum': 0.96,
         # 'cp': 0.1,
         'lower': -2.0,
@@ -91,7 +91,7 @@ if __name__ == "__main__":
     }
     wandb.init(project="gan-nDES", entity="mmatak", config={**train_loader_config, **ndes_config})
 
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.MSELoss()
 
     discriminator = Discriminator(hidden_dim=256, input_dim=784).to(DEVICE)
     generator = Generator(latent_dim=32, hidden_dim=256, output_dim=784).to(DEVICE)

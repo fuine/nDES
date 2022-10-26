@@ -154,6 +154,7 @@ class NDES:
         x2_sample = torch.randint(0, self.mu, (self.lambda_,), device=self.cpu)
         return history_sample1, history_sample2, x1_sample, x2_sample
 
+    # linie 12 - 15
     #  @profile
     def get_diffs(self, hist_head, history, d_mean, pc):
         limit = hist_head + 1 if self.iter_ <= self.hist_size else self.hist_size
@@ -256,7 +257,7 @@ class NDES:
             sorting_idx = fitness.argsort()
             sorted_weights_pop = self.weights_pop[sorting_idx]
             #  FIXME-question: are these being sorted -> check
-            pop_mean = population.matmul(sorted_weights_pop)
+            pop_mean = population.matmul(sorted_weights_pop)  # FIXME very big weights
 
             if self.secondary_mutation == SecondaryMutation.RandomNoise:
                 chi_N = sqrt(self.problem_size)
