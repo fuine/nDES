@@ -1,6 +1,6 @@
 import torch
 from torchvision import datasets, transforms
-from src.data_loaders.datasource import show_images_from_tensor
+import torch.utils.data
 
 
 class FashionMNISTDataset:
@@ -10,29 +10,23 @@ class FashionMNISTDataset:
             "../data",
             train=True,
             download=True,
-            transform=transforms.Compose(
-                [transforms.ToTensor(), transform]
-            ),
+            transform=transform,
         )
         self.test_dataset = datasets.FashionMNIST(
             "../data",
             train=False,
             transform=transforms.Compose(
-                [transforms.ToTensor(), transforms.ToTensor()]
+                [transforms.ToTensor()]
             ),
         )
+
+        for x, y in torch.utils.data.DataLoader(
+            self.train_dataset, batch_size=len(self.train_dataset), shuffle=True
+        ):
+            self.train_data, self.train_targets = x, y
 
     def get_train_set_targets(self):
         return torch.ones_like(self.train_dataset.targets)
 
-    def get_train_images_displayable(self):
-        return torch.unsqueeze(self.train_dataset.data, 1)
-
-
-if __name__ == "__main__":
-    fashionMNIST = FashionMNISTDataset()
-    # print(tensor_to_list_of_images(fashionMNIST.get_train_set()))
-    result = fashionMNIST.get_train_images_displayable()
-    print(fashionMNIST.get_train_set_targets())
-    print(fashionMNIST.train_dataset.targets.shape)
-    show_images_from_tensor(result[0:10])
+    def get_train_images(self):
+        return self.train_data
