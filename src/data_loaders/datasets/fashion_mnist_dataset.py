@@ -22,16 +22,17 @@ class FashionMNISTDataset:
             ),
         )
 
-    def get_train_set_target(self):
+    def get_train_set_targets(self):
         return torch.ones_like(self.train_dataset.targets)
 
     def get_train_images_displayable(self):
         return torch.unsqueeze(self.train_dataset.data, 1)
 
-#
-# if __name__ == "__main__":
-#     fashionMNIST = FashionMNISTDataset()
-#     # print(tensor_to_list_of_images(fashionMNIST.get_train_set()))
-#     result = fashionMNIST.get_train_images_displayable()
-#     # 64, 1, 28, 28
-#     show_images_from_tensor(result[0:10])
+
+if __name__ == "__main__":
+    fashionMNIST = FashionMNISTDataset()
+    # print(tensor_to_list_of_images(fashionMNIST.get_train_set()))
+    result = fashionMNIST.get_train_images_displayable()
+    print(fashionMNIST.get_train_set_targets())
+    print(fashionMNIST.train_dataset.targets.shape)
+    show_images_from_tensor(result[0:10])

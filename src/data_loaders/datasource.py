@@ -24,6 +24,13 @@ def show_images_from_tensor(images, n_row=8):
     plt.show()
 
 
+def get_train_images_dataset():
+    from torchvision.datasets import FashionMNIST
+    transform = transforms.Compose([transforms.ToTensor()])
+    train_dataset = FashionMNIST(root="data/", train=True, transform=transform, download=True)
+    return train_dataset
+
+
 def create_loader_for_dataset(dataset, **kwargs):
     return torch.utils.data.DataLoader(
         dataset,

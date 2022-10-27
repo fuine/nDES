@@ -1,3 +1,4 @@
 podać zbiory walidacyjne
 data loader for fashionmnist
 ustalić czemu lamarckian ustawia się wszędzie na 3
+[maybe] writing tests for datasets to have some documentation of them
