@@ -28,4 +28,4 @@ if __name__ == "__main__":
 
     sample_batch = next(iter(loader))
     show_images_from_tensor(sample_batch[1][0])
-    print(sample_batch[1][1])
+    print(sample_batch[1][1].unsqueeze(1).shape)

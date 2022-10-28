@@ -5,11 +5,11 @@ import wandb
 
 from src.classic.ndes_optimizer import BasenDESOptimizer
 from src.classic.ndes import SecondaryMutation
-from src.classic.utils import seed_everything, train_via_ndes_without_test_dataset, train_via_ndes
+from src.classic.utils import seed_everything, train_via_ndes_without_test_dataset, train_via_ndes, shuffle_dataset
 from src.classic.fashion_mnist_experiment import MyDatasetLoader
 
-from src.data_loaders.datasource import get_train_images_dataset
-from src.data_loaders.generator_data_loader import GeneratorDataLoader
+from src.data_loaders.datasets.fashion_mnist_dataset import FashionMNISTDataset
+from src.data_loaders.datasets.generated_fake_dataset import GeneratedFakeDataset
 
 POPULATION_MULTIPLIER = 1
 POPULATION = int(POPULATION_MULTIPLIER * 50)
@@ -95,11 +95,22 @@ if __name__ == "__main__":
 
     discriminator = Discriminator(hidden_dim=256, input_dim=784).to(DEVICE)
     generator = Generator(latent_dim=32, hidden_dim=256, output_dim=784).to(DEVICE)
-    train_dataset = get_train_images_dataset()
-    x_train = train_dataset.data.float().to(DEVICE)
-    y_train = torch.unsqueeze(torch.ones_like(train_dataset.targets, dtype=torch.float), 1).to(DEVICE)
-    # train_loader = MyDatasetLoader(x_train, y_train, BATCH_SIZE)
-    train_loader = GeneratorDataLoader(generator, BATCH_SIZE, DEVICE, BATCH_NUM)
+
+    fashionMNIST = FashionMNISTDataset()
+    train_data_real = FashionMNISTDataset().train_data
+
+    generated_fake_dataset = GeneratedFakeDataset(generator, len(train_data_real))
+    train_data_fake = generated_fake_dataset.train_dataset
+
+    train_data_merged = torch.cat([train_data_fake, train_data_real], 0)
+    train_targets_merged = torch.cat(
+        [generated_fake_dataset.get_train_set_targets(), fashionMNIST.get_train_set_targets()], 0).unsqueeze(1)
+    train_data_merged, train_targets_merged = shuffle_dataset(train_data_merged, train_targets_merged)
+    train_loader = MyDatasetLoader(
+        x_train=train_data_merged.to(DEVICE),
+        y_train=train_targets_merged.to(DEVICE),
+        batch_size=BATCH_SIZE
+    )
 
     if LOAD_WEIGHTS:
         raise Exception("Not yet implemented")
@@ -122,9 +133,9 @@ if __name__ == "__main__":
             device=DEVICE,
         )
         # train_via_ndes(discriminator, discriminator_ndes_optim, DEVICE, MODEL_NAME)
-        print(discriminator(train_loader.get_sample_images_gpu()))
+        # print(discriminator(train_loader.get_sample_images_gpu()))
         train_via_ndes_without_test_dataset(discriminator, discriminator_ndes_optim, DEVICE, MODEL_NAME)
-        print(discriminator(train_loader.get_sample_images_gpu()))
+        # print(discriminator(train_loader.get_sample_images_gpu()))
         # generate noise
         # 1. teach discriminator via ndes
         # 2. teach generator via ndes
