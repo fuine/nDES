@@ -1,6 +1,4 @@
 import torch
-from src.data_loaders.datasource import show_images_from_tensor
-
 
 def get_noise_for_nn(latent_dim, n_examples, device):
     return get_noise(n_examples, latent_dim, device)
@@ -25,4 +23,4 @@ class GeneratedFakeDataset:
         return self.train_dataset
 
     def get_train_set_targets(self):
-        return torch.ones(self.num_of_samples)
+        return torch.zeros(self.num_of_samples)

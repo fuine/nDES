@@ -2,7 +2,9 @@ from generated_fake_dataset import GeneratedFakeDataset
 from fashion_mnist_dataset import FashionMNISTDataset
 from src.gan.gan_experiment import Generator
 import torch.utils.data
+from src.classic.utils import shuffle_dataset
 from src.data_loaders.datasource import show_images_from_tensor
+from src.data_loaders.my_data_set_loader import MyDatasetLoader
 
 
 if __name__ == "__main__":
@@ -10,21 +12,20 @@ if __name__ == "__main__":
     latent_dim = 32
     generator = Generator(latent_dim=latent_dim, hidden_dim=256, output_dim=784).to(device)
     fashionMNIST = FashionMNISTDataset()
-    train_real = FashionMNISTDataset().train_data
+    train_data_real = FashionMNISTDataset().train_data
 
-    generated_fake_dataset = GeneratedFakeDataset(generator, len(train_real))
-    train_fake = generated_fake_dataset.train_dataset
+    generated_fake_dataset = GeneratedFakeDataset(generator, len(train_data_real))
+    train_data_fake = generated_fake_dataset.train_dataset
 
-    merged_datasets = torch.cat([train_fake, train_real], 0)
+    train_data_merged = torch.cat([train_data_fake, train_data_real], 0)
+    train_targets_merged = torch.cat([generated_fake_dataset.get_train_set_targets(), fashionMNIST.get_train_set_targets()], 0)
+    train_data_merged, train_targets_merged = shuffle_dataset(train_data_merged, train_targets_merged)
+    loader = MyDatasetLoader(
+        x_train=train_data_merged,
+        y_train=train_targets_merged,
+        batch_size=100
+    )
 
-    print(merged_datasets.shape)
-    train_loader_config = {
-        'batch_size': 64,
-        'shuffle': True,
-        'drop_last': True,
-        'pin_memory': True,
-        'num_workers': 4
-    }
-    loader = torch.utils.data.DataLoader(merged_datasets, **train_loader_config)
     sample_batch = next(iter(loader))
-    show_images_from_tensor(sample_batch)
+    show_images_from_tensor(sample_batch[1][0])
+    print(sample_batch[1][1])
