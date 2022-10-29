@@ -7,6 +7,7 @@ from src.classic.ndes_optimizer import BasenDESOptimizer
 from src.classic.ndes import SecondaryMutation
 from src.classic.utils import seed_everything, train_via_ndes_without_test_dataset, train_via_ndes, shuffle_dataset
 from src.classic.fashion_mnist_experiment import MyDatasetLoader
+from src.data_loaders.datasource import show_images_from_tensor
 
 from src.data_loaders.datasets.fashion_mnist_dataset import FashionMNISTDataset
 from src.data_loaders.datasets.generated_fake_dataset import GeneratedFakeDataset
@@ -22,9 +23,18 @@ MODEL_NAME = "gan_ndes"
 LOAD_WEIGHTS = False
 SEED_OFFSET = 0
 BATCH_SIZE = 64
-BATCH_NUM = 20
+BATCH_NUM = 50
 VALIDATION_SIZE = 10000
 STRATIFY = False
+
+
+def show_sample_predictions(discriminator, my_data_loader_batch):
+    # TODO to można podzielić na funkcje
+    show_images_from_tensor(my_data_loader_batch[1][0].cpu())
+    predictions = discriminator(my_data_loader_batch[1][0].to(DEVICE)).cpu()
+    print(f"Loss: {criterion(predictions.cuda(), my_data_loader_batch[1][1].cuda())}")
+    # print(f"Predictions: {predictions}")
+    # print(f"Targets: {my_data_loader_batch[1][1]}")
 
 
 class Generator(pl.LightningModule):
@@ -79,11 +89,11 @@ if __name__ == "__main__":
     ndes_config = {
         'history': 16,
         'worst_fitness': 3,
-        'Ft': 100,
+        'Ft': 1,
         'ccum': 0.96,
         # 'cp': 0.1,
-        'lower': -2.0,
-        'upper': 2.0,
+        'lower': -50.0,
+        'upper': 50.0,
         'log_dir': "ndes_logs/",
         'tol': 1e-6,
         'budget': EPOCHS,
@@ -127,14 +137,16 @@ if __name__ == "__main__":
             ndes_config=ndes_config,
             use_fitness_ewma=True,
             restarts=None,
-            lr=1,
+            lr=0.001,
             secondary_mutation=SecondaryMutation.Gradient,
             lambda_=POPULATION,
             device=DEVICE,
         )
         # train_via_ndes(discriminator, discriminator_ndes_optim, DEVICE, MODEL_NAME)
         # print(discriminator(train_loader.get_sample_images_gpu()))
+        show_sample_predictions(discriminator, next(iter(train_loader)))
         train_via_ndes_without_test_dataset(discriminator, discriminator_ndes_optim, DEVICE, MODEL_NAME)
+        show_sample_predictions(discriminator, next(iter(train_loader)))
         # print(discriminator(train_loader.get_sample_images_gpu()))
         # generate noise
         # 1. teach discriminator via ndes

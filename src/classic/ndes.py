@@ -343,7 +343,7 @@ class NDES:
 
                 # Evaluation
                 #  start = timer()
-                fitness = self._fitness_lamarckian(population)
+                fitness = self._fitness_lamarckian(population)  # FIXME:tutaj następuje ustawienie wszystkich fitnessów na 3.0
                 #  end = timer()
                 #  evaluation_times.append(end - start)
                 if not self.lamarckism:
