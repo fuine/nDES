@@ -40,7 +40,7 @@ class GeneratorDataLoader:
         return self.get_noise(n_examples, latent_dim, device)
 
     def get_classes_for_images_gpu(self):
-        return torch.ones(self.batch_size, 1).to(self.device) * 50
+        return torch.zeros(self.batch_size, 1).to(self.device)
 
     def get_sample_images_gpu(self):
         return next(iter(self))[1][0]

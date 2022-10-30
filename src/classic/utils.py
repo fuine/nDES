@@ -8,6 +8,7 @@ import torch.nn.functional as F
 
 from math import ceil
 from sklearn.model_selection import StratifiedKFold
+from sklearn.utils import shuffle
 from gpu_utils import bounce_back_boundary_2d as bounce_back_boundary_2d_cuda
 
 
@@ -171,6 +172,11 @@ def bounce_back_boundary_2d(x, lower, upper):
     upper = upper[0]
     delta = upper - lower
     return bounce_back_boundary_2d_cuda(x, lower, upper, delta)
+
+
+def shuffle_dataset(data, targets):
+    shuffled_data, shuffled_targets = shuffle(data, targets)
+    return shuffled_data, shuffled_targets
 
 
 def stratify(x_train, y_train, batch_size):
