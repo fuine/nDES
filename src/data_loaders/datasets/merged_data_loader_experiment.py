@@ -1,6 +1,6 @@
 from generated_fake_dataset import GeneratedFakeDataset
 from fashion_mnist_dataset import FashionMNISTDataset
-from src.gan.gan_experiment import Generator
+from src.gan.discriminator_experiment import Generator
 import torch.utils.data
 from src.classic.utils import shuffle_dataset
 from src.data_loaders.datasource import show_images_from_tensor
