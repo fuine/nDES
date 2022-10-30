@@ -1,5 +1,6 @@
 import torch
 
+
 def get_noise_for_nn(latent_dim, n_examples, device):
     return get_noise(n_examples, latent_dim, device)
 

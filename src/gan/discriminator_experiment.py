@@ -11,6 +11,7 @@ from src.data_loaders.datasource import show_images_from_tensor
 from src.data_loaders.datasets.fashion_mnist_dataset import FashionMNISTDataset
 from src.data_loaders.datasets.generated_fake_dataset import GeneratedFakeDataset
 from src.gan.generator import Generator
+from src.gan.discriminator import Discriminator
 
 POPULATION_MULTIPLIER = 1
 POPULATION = int(POPULATION_MULTIPLIER * 50)
@@ -19,7 +20,7 @@ NDES_TRAINING = True
 
 DEVICE = torch.device("cuda:0")
 BOOTSTRAP = False
-MODEL_NAME = "gan_ndes"
+MODEL_NAME = "gan_ndes_discriminator"
 LOAD_WEIGHTS = False
 SEED_OFFSET = 0
 BATCH_SIZE = 64
@@ -39,13 +40,6 @@ def show_sample_predictions(discriminator, my_data_loader_batch):
 if __name__ == "__main__":
     seed_everything(SEED_OFFSET)
 
-    train_loader_config = {
-        'batch_size': 64,
-        'shuffle': True,
-        'drop_last': True,
-        'pin_memory': True,
-        'num_workers': 4
-    }
     ndes_config = {
         'history': 16,
         'worst_fitness': 3,
@@ -59,7 +53,7 @@ if __name__ == "__main__":
         'budget': EPOCHS,
         'device': DEVICE
     }
-    wandb.init(project="gan-nDES", entity="mmatak", config={**train_loader_config, **ndes_config})
+    wandb.init(project=MODEL_NAME, entity="mmatak", config={**ndes_config})
 
     criterion = nn.MSELoss()
 

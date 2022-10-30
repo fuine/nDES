@@ -21,7 +21,8 @@ class FitnessEWMALogger:
         model.cuda()
         for batch_idx, (b_x, y) in data_gen:
             out = model(b_x)
-            loss = criterion(out, y).item()
+            loss = criterion(out, y)
+            loss = loss.item()
             self.ewma[batch_idx] = loss
             if batch_idx >= self.num_batches - 1:
                 break
