@@ -12,7 +12,7 @@ from src.data_loaders.my_data_set_loader import MyDatasetLoader
 
 POPULATION_MULTIPLIER = 1
 POPULATION = int(POPULATION_MULTIPLIER * 50)
-EPOCHS = int(POPULATION) * 100
+EPOCHS = int(POPULATION) * 500
 NDES_TRAINING = True
 
 DEVICE = torch.device("cuda:0")
@@ -30,12 +30,12 @@ if __name__ == "__main__":
     seed_everything(0)
 
     discriminator = Discriminator(hidden_dim=256, input_dim=784).to(DEVICE)
+    discriminator.load_state_dict(torch.load("resources/discriminator_notebook"))
     generator = Generator(latent_dim=32, hidden_dim=256, output_dim=784).to(DEVICE)
 
     num_of_samples = 10
     # generate images from generator
     generated_images = generator(get_noise_for_nn(generator.get_latent_dim(), num_of_samples, generator.device)).detach().cpu()  # może być tworzona za pomocą datasetu
-    show_images_from_tensor(generated_images)
 
     ndes_config = {
         'history': 16,
@@ -88,7 +88,10 @@ if __name__ == "__main__":
     print(discriminator(generated_images.cuda()).sum())  # funkcja kosztu -> maksymalizacja
     train_via_ndes_without_test_dataset(generator, generator_ndes_optim, DEVICE, MODEL_NAME)
     generated_images = generator(get_noise_for_nn(generator.get_latent_dim(), num_of_samples, generator.device)).detach().cpu()
-    print(discriminator(generated_images.cuda()).sum())  # funkcja kosztu -> maksymalizacja
+    print(discriminator(generated_images.cuda()))
+    print(discriminator(generated_images.cuda()).sum())# funkcja kosztu -> maksymalizacja
+    show_images_from_tensor(generated_images)
+
 
 
 
