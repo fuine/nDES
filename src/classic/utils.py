@@ -17,6 +17,10 @@ def create_directory(directory: str) -> None:
         os.makedirs(directory)
 
 
+def count_model_parameters(model) -> int:
+    return sum(p.numel() for p in model.parameters())
+
+
 def seed_everything(offset=0):
     torch.manual_seed(1235 + offset)
     torch.backends.cudnn.deterministic = True

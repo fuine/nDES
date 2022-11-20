@@ -34,8 +34,8 @@ def show_sample_predictions(discriminator, my_data_loader_batch):
     show_images_from_tensor(my_data_loader_batch[1][0].cpu())
     predictions = discriminator(my_data_loader_batch[1][0].to(DEVICE)).cpu()
     print(f"Loss: {criterion(predictions.cuda(), my_data_loader_batch[1][1].cuda())}")
-    # print(f"Predictions: {predictions}")
-    # print(f"Targets: {my_data_loader_batch[1][1]}")
+    print(f"Predictions: {predictions}")
+    print(f"Targets: {my_data_loader_batch[1][1]}")
 
 if __name__ == "__main__":
     seed_everything(SEED_OFFSET)
